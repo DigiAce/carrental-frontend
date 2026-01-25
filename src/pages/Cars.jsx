@@ -49,7 +49,7 @@ function Cars() {
 
   const fetchCars = async () => {
     try {
-      const response = await fetch("http://localhost:5001/api/cars");
+      const response = await fetch(`${BACKEND_URL}/cars`);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
       let carsArray = [];
