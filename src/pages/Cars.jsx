@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Gauge, Fuel, Users, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+const BACKEND_URL = `${import.meta.env.VITE_API_URL}/api`;
+
 function Cars() {
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
