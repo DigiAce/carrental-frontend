@@ -1,18 +1,14 @@
+// AdminDashboard.jsx (updated upload handling)
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
-// AdminDashboard.jsx
-// Full working admin dashboard component with single/multiple image upload
-// Assumes backend endpoints at http://localhost:5001/api
-
 function AdminDashboard({ onLogout }) {
   const BACKEND_URL = `${import.meta.env.VITE_API_URL}/api`;
-  const TOKEN_KEY = "token"; // confirmed by you
 
   const PLACEHOLDER_CAR_IMAGE =
-    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23f8fafc'/%3E%3Cpath d='M80 120h140v40H80z' fill='%23e2e8f0'/%3E%3Ccircle cx='100' cy='140' r='20' fill='%23cbd5e1'/%3E%3Ccircle cx='200' cy='140' r='20' fill='%23cbd5e1'/%3E%3Cpath d='M120 100l60-20' stroke='%2394a3b8' stroke-width='2' fill='none'/%3E%3C/svg%3E";
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%236b7280'%3ECar Image%3C/text%3E%3C/svg%3E";
   const PLACEHOLDER_ERROR_IMAGE =
-    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23fef2f2'/%3E%3Cpath d='M120 80l60 60m0-60l-60 60' stroke='%23dc2626' stroke-width='3' fill='none'/%3E%3Ctext x='150' y='170' text-anchor='middle' font-family='Arial' font-size='12' fill='%23dc2626'%3EImage Failed to Load%3C/text%3E%3C/svg%3E";
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23fef2f2'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%23dc2626'%3EImage Error%3C/text%3E%3C/svg%3E";
 
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,13 +16,18 @@ function AdminDashboard({ onLogout }) {
   const [showForm, setShowForm] = useState(false);
   const [editingCar, setEditingCar] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [activeView, setActiveView] = useState("grid");
 
   // Multi-image state
   const [imageFiles, setImageFiles] = useState([]);
-  const [imagePreviews, setImagePreviews] = useState([]); 
+  const [imagePreviews, setImagePreviews] = useState([]);
 
   // Lightbox state
-  const [lightbox, setLightbox] = useState({ open: false, images: [], index: 0 });
+  const [lightbox, setLightbox] = useState({
+    open: false,
+    images: [],
+    index: 0,
+  });
 
   const [formData, setFormData] = useState({
     brand: "",
@@ -48,20 +49,28 @@ function AdminDashboard({ onLogout }) {
   });
 
   const navigate = useNavigate();
-  const getAuthToken = () => localStorage.getItem(TOKEN_KEY);
+  const getAuthToken = () => localStorage.getItem("token");
   const getCarId = (car) => car.$id || car.id;
 
   // Get primary image with better fallback
   const getPrimaryImage = (car) => {
-    if (Array.isArray(car.images) && car.images.length > 0) return car.images[0];
-    if (car.imageUrl) return car.imageUrl;
+    if (Array.isArray(car.images) && car.images.length > 0) {
+      return car.images[0];
+    }
+    if (car.imageUrl) {
+      return car.imageUrl;
+    }
     return PLACEHOLDER_CAR_IMAGE;
   };
 
   // Get all images for a car
   const getAllImages = (car) => {
-    if (Array.isArray(car.images) && car.images.length > 0) return car.images;
-    if (car.imageUrl) return [car.imageUrl];
+    if (Array.isArray(car.images) && car.images.length > 0) {
+      return car.images;
+    }
+    if (car.imageUrl) {
+      return [car.imageUrl];
+    }
     return [PLACEHOLDER_CAR_IMAGE];
   };
 
@@ -69,15 +78,21 @@ function AdminDashboard({ onLogout }) {
     try {
       setLoading(true);
       setError("");
+      console.log("🔄 Fetching cars...");
 
       const res = await fetch(`${BACKEND_URL}/cars`);
       if (!res.ok) throw new Error(`Failed to fetch cars: ${res.status}`);
-
       const data = await res.json();
-      const docs = Array.isArray(data) ? data : data?.data || data?.documents || [];
 
+      // server returns { success: true, data: [...] }
+      const docs = Array.isArray(data)
+        ? data
+        : data.data || data.documents || [];
+
+      console.log(`✅ Loaded ${docs.length} cars`);
       setCars(docs);
     } catch (err) {
+      console.error("❌ Fetch error:", err);
       setError(err.message || "Failed to load cars");
       setCars([]);
     } finally {
@@ -90,7 +105,7 @@ function AdminDashboard({ onLogout }) {
   }, [fetchCars]);
 
   const handleLogout = () => {
-    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem("token");
     localStorage.removeItem("user");
     onLogout?.();
     navigate("/login");
@@ -98,12 +113,17 @@ function AdminDashboard({ onLogout }) {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
   };
 
-  // Multi-file selection with validation
+  // Multi-file selection with better validation
   const handleFilesChange = (e) => {
     const files = Array.from(e.target.files || []);
+
+    // Validate files
     const validFiles = files.filter((file) => {
       if (!file.type.startsWith("image/")) {
         setError(`Skipped ${file.name}: Not an image file`);
@@ -117,6 +137,7 @@ function AdminDashboard({ onLogout }) {
     });
 
     if (validFiles.length === 0 && files.length > 0) {
+      setError("No valid image files selected");
       return;
     }
 
@@ -124,89 +145,167 @@ function AdminDashboard({ onLogout }) {
       setImageFiles((prev) => [...prev, ...validFiles]);
       const newPreviews = validFiles.map((file) => URL.createObjectURL(file));
       setImagePreviews((prev) => [...prev, ...newPreviews]);
-      setError("");
+      setError(""); // Clear previous errors
     }
-
-    // clear input value so same file can be reselected later if needed
-    e.target.value = "";
   };
 
+  // Remove individual image
   const removeImage = (index) => {
     setImageFiles((prev) => prev.filter((_, i) => i !== index));
-    URL.revokeObjectURL(imagePreviews[index]);
+    try {
+      URL.revokeObjectURL(imagePreviews[index]); // Clean up memory
+    } catch (e) {}
     setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const validateForm = () => {
     const required = ["brand", "model", "year", "price", "fuelType"];
-    const missing = required.filter((field) => !formData[field]?.toString().trim());
-    if (missing.length) throw new Error(`Missing required fields: ${missing.join(", ")}`);
-    if (formData.year && (+formData.year < 1886 || +formData.year > 2030)) throw new Error("Year must be between 1886 and 2030");
-    if (formData.price && (+formData.price < 0 || +formData.price > 1000000)) throw new Error("Price must be between 0 and 1,000,000");
+    const missing = required.filter(
+      (field) => !formData[field]?.toString().trim(),
+    );
+
+    if (missing.length) {
+      throw new Error(`Missing required fields: ${missing.join(", ")}`);
+    }
+
+    if (formData.year && +formData.year < 1886) {
+      throw new Error("Year must be >= 1886");
+    }
+    if (formData.year && +formData.year > 2030) {
+      throw new Error("Year must be <= 2030");
+    }
+
+    if (formData.price && (+formData.price < 0 || +formData.price > 1000000)) {
+      throw new Error("Price must be between 0 and 1,000,000");
+    }
   };
 
-  // Upload multiple images to /upload-multiple
+  // Upload multiple images
   const uploadMultiple = async (files) => {
-    if (!files || files.length === 0) return [];
-    const token = getAuthToken();
-    if (!token) throw new Error("No authentication token - please login again");
+    console.log("=== UPLOAD DEBUG START ===");
 
+    if (!files || files.length === 0) {
+      console.log("❌ No files to upload");
+      return [];
+    }
+
+    const token = getAuthToken();
+    console.log("🔑 Token exists:", !!token);
+
+    if (!token) {
+      throw new Error("No authentication token - please login again");
+    }
+
+    // Test endpoint first (optional)
+    try {
+      console.log("🔍 Testing upload endpoint (debug)...");
+      const testRes = await fetch(`${BACKEND_URL}/debug/upload-test`);
+      if (!testRes.ok) {
+        // don't fail hard here — we'll try the actual upload and surface errors instead
+        console.warn("Upload-test returned non-OK:", testRes.status);
+      } else {
+        const testData = await testRes.json().catch(() => ({}));
+        console.log("✅ Endpoint test:", testData?.message ?? testData);
+      }
+    } catch (testError) {
+      console.warn("Upload-test request failed (continuing):", testError);
+      // continue — actual upload may still work
+    }
+
+    // Create FormData
     const fd = new FormData();
     files.forEach((file) => fd.append("images", file));
 
-    const res = await fetch(`${BACKEND_URL}/upload-multiple`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` }, // do NOT set Content-Type
-      body: fd,
-    });
-
-    let result;
+    console.log("📤 Starting upload request...");
     try {
-      result = await res.json();
-    } catch (e) {
-      throw new Error(`Upload failed: server responded with status ${res.status}`);
-    }
+      const res = await fetch(`${BACKEND_URL}/upload-multiple`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // IMPORTANT: do NOT set Content-Type for FormData
+        },
+        body: fd,
+      });
 
-    if (!res.ok) {
-      // show per-file errors when available
-      if (result?.files && Array.isArray(result.files)) {
-        const errs = result.files.filter((f) => f.success === false).map((f) => `${f.name}: ${f.error || "unknown"}`);
-        throw new Error(`Upload failed (${res.status}): ${errs.join("; ")}`);
+      console.log("📡 Response status:", res.status, "OK:", res.ok);
+
+      const result = await res.json().catch(() => ({}));
+      console.log("📄 Response data:", result);
+
+      if (!res.ok) {
+        throw new Error(
+          result?.error || `Upload failed with status ${res.status}`,
+        );
       }
-      throw new Error(result?.error || `Upload failed with status ${res.status}`);
-    }
 
-    const uploadedUrls = Array.isArray(result.files) ? result.files.filter((f) => f.success && f.url).map((f) => f.url) : [];
+      // Your server sends back: { success: true, total: N, files: [{ success: true, url, id, name }, ...] }
+      let urls = [];
 
-    // fallback to per-file single upload if necessary
-    if (uploadedUrls.length === 0) {
-      const perFile = [];
-      for (const file of files) {
-        try {
-          const singleFd = new FormData();
-          singleFd.append("image", file);
-          const r = await fetch(`${BACKEND_URL}/upload`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}` },
-            body: singleFd,
-          });
-          const jr = await r.json().catch(() => ({}));
-          if (r.ok && jr?.success && jr.imageUrl) perFile.push(jr.imageUrl);
-        } catch (e) {
-          console.error("single upload fallback error", e);
-        }
+      if (Array.isArray(result.files)) {
+        urls = result.files
+          .filter((f) => f && (f.url || f.success)) // keep successful entries
+          .map((f) => f.url || f.imageUrl || f.path) // prefer url
+          .filter(Boolean);
+      } else if (Array.isArray(result.urls)) {
+        urls = result.urls;
+      } else if (result.url) {
+        urls = [result.url];
       }
-      if (perFile.length > 0) return perFile;
-      throw new Error("No images were successfully uploaded. Check server logs and Appwrite permissions.");
-    }
 
-    // show warning for partial failures
-    if (result.files) {
-      const failed = result.files.filter((f) => f.success === false);
-      if (failed.length) setError(`Warning: ${failed.length} file(s) failed to upload: ${failed.map((f) => f.name).join(", ")}`);
-    }
+      console.log("✅ Upload successful! Resolved URLs:", urls);
 
-    return uploadedUrls;
+      console.log("=== UPLOAD DEBUG END ===");
+      return urls;
+    } catch (error) {
+      console.error("❌ Upload failed:", error);
+      console.log("=== UPLOAD DEBUG END WITH ERROR ===");
+      throw error;
+    }
+  };
+
+  // Test upload system function (keeps original semantics)
+  const testUploadSystem = async () => {
+    try {
+      setError("🧪 Testing upload system...");
+      console.log("=== UPLOAD SYSTEM TEST ===");
+
+      // Test 1: Backend health
+      console.log("1. Testing backend health...");
+      const healthRes = await fetch(`${BACKEND_URL}/health`);
+      const healthData = await healthRes.json();
+      console.log("Health:", healthData);
+
+      if (!healthRes.ok)
+        throw new Error(`Health check failed: ${healthData?.error}`);
+      // Test 2: Upload endpoint (debug)
+      console.log("2. Testing upload endpoint (debug)...");
+      const testRes = await fetch(`${BACKEND_URL}/debug/upload-test`);
+      const testData = await testRes.json();
+      console.log("Upload test:", testData);
+
+      if (!testRes.ok)
+        throw new Error(`Upload endpoint test failed: ${testData?.error}`);
+
+      setError(`✅ Upload system working! Backend is connected.`);
+      console.log("=== UPLOAD SYSTEM TEST COMPLETE ===");
+    } catch (err) {
+      console.error("❌ Upload system test failed:", err);
+      setError(`❌ Upload test failed: ${err.message}`);
+    }
+  };
+
+  // Debug function to test upload endpoint briefly
+  const testUploadEndpoint = async () => {
+    try {
+      setError("Testing backend...");
+      const res = await fetch(`${BACKEND_URL}/health`);
+      const data = await res.json();
+      setError(
+        `Backend status: ${data.success ? "✅ Connected" : "❌ Failed"}`,
+      );
+    } catch (err) {
+      setError(`❌ Backend connection failed: ${err.message}`);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -219,10 +318,17 @@ function AdminDashboard({ onLogout }) {
       const token = getAuthToken();
       if (!token) throw new Error("No authentication token found");
 
+      // Upload new images
       let uploadedUrls = [];
-      if (imageFiles.length > 0) uploadedUrls = await uploadMultiple(imageFiles);
+      if (imageFiles.length > 0) {
+        uploadedUrls = await uploadMultiple(imageFiles);
+      }
 
-      const allImages = [...uploadedUrls, ...formData.images];
+      // Combine new and existing images (formData.images contains existing image URLs)
+      const allImages = [
+        ...uploadedUrls,
+        ...(Array.isArray(formData.images) ? formData.images : []),
+      ];
 
       const payload = {
         brand: formData.brand,
@@ -237,14 +343,26 @@ function AdminDashboard({ onLogout }) {
         transmission: formData.transmission,
         owners: formData.owners,
         type: formData.type,
-        seatingCapacity: formData.seatingCapacity ? parseInt(formData.seatingCapacity, 10) : 5,
+        seatingCapacity: formData.seatingCapacity
+          ? parseInt(formData.seatingCapacity, 10)
+          : 5,
         location: formData.location,
         available: formData.available,
-        features: typeof formData.features === "string" && formData.features.trim() ? formData.features.split(",").map((f) => f.trim()).filter(Boolean) : [],
+        features:
+          typeof formData.features === "string" && formData.features.trim()
+            ? formData.features
+                .split(",")
+                .map((f) => f.trim())
+                .filter(Boolean)
+            : [],
       };
 
-      const url = editingCar ? `${BACKEND_URL}/cars/${getCarId(editingCar)}` : `${BACKEND_URL}/cars`;
+      const url = editingCar
+        ? `${BACKEND_URL}/cars/${getCarId(editingCar)}`
+        : `${BACKEND_URL}/cars`;
       const method = editingCar ? "PUT" : "POST";
+
+      console.log("📦 Sending payload:", payload);
 
       const res = await fetch(url, {
         method,
@@ -256,8 +374,14 @@ function AdminDashboard({ onLogout }) {
       });
 
       const result = await res.json().catch(() => ({}));
-      if (!res.ok || !result?.success) throw new Error(result?.error || `Failed to ${editingCar ? "update" : "create"} car`);
 
+      if (!res.ok || !result?.success) {
+        throw new Error(
+          result?.error || `Failed to ${editingCar ? "update" : "create"} car`,
+        );
+      }
+
+      // success — reload cars and clear the form + previews
       await fetchCars();
       setShowForm(false);
       resetForm();
@@ -265,7 +389,7 @@ function AdminDashboard({ onLogout }) {
       setError(`✅ Car ${editingCar ? "updated" : "created"} successfully!`);
       setTimeout(() => setError(""), 3000);
     } catch (err) {
-      console.error("Submit error:", err);
+      console.error("❌ Submit error:", err);
       setError(err.message || "Something went wrong");
     } finally {
       setUploading(false);
@@ -291,9 +415,13 @@ function AdminDashboard({ onLogout }) {
       available: true,
       features: "",
     });
-
-    imagePreviews.forEach((url) => URL.revokeObjectURL(url));
     setImageFiles([]);
+    // Clean up object URLs to prevent memory leaks
+    imagePreviews.forEach((url) => {
+      try {
+        URL.revokeObjectURL(url);
+      } catch (e) {}
+    });
     setImagePreviews([]);
   };
 
@@ -315,19 +443,16 @@ function AdminDashboard({ onLogout }) {
       seatingCapacity: car.seatingCapacity?.toString() || "5",
       location: car.location || "Main Branch",
       available: car.available !== undefined ? car.available : true,
-      features: Array.isArray(car.features) ? car.features.join(", ") : (car.features || ""),
+      features: Array.isArray(car.features)
+        ? car.features.join(", ")
+        : car.features || "",
     });
-
-    imagePreviews.forEach((url) => URL.revokeObjectURL(url));
-    setImageFiles([]);
-    setImagePreviews([]);
-
     setShowForm(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleDelete = async (carId) => {
     if (!window.confirm("Are you sure you want to delete this car?")) return;
+
     try {
       const token = getAuthToken();
       if (!token) throw new Error("No authentication token found");
@@ -338,13 +463,16 @@ function AdminDashboard({ onLogout }) {
       });
 
       const result = await res.json().catch(() => ({}));
-      if (!res.ok || !result?.success) throw new Error(result?.error || "Delete failed");
+
+      if (!res.ok || !result?.success) {
+        throw new Error(result?.error || "Delete failed");
+      }
 
       setCars((prev) => prev.filter((car) => getCarId(car) !== carId));
       setError("✅ Car deleted successfully!");
       setTimeout(() => setError(""), 3000);
     } catch (err) {
-      setError(err.message || "Failed to delete car");
+      setError(err.message);
     }
   };
 
@@ -355,72 +483,119 @@ function AdminDashboard({ onLogout }) {
 
       const res = await fetch(`${BACKEND_URL}/cars/${getCarId(car)}`, {
         method: "PUT",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ available: !car.available }),
       });
 
       const result = await res.json().catch(() => ({}));
-      if (!res.ok || !result?.success) throw new Error(result?.error || "Update failed");
 
-      setCars((prev) => prev.map((c) => (getCarId(c) === getCarId(car) ? { ...c, available: !car.available } : c)));
+      if (!res.ok || !result?.success) {
+        throw new Error(result?.error || "Update failed");
+      }
+
+      setCars((prev) =>
+        prev.map((c) =>
+          getCarId(c) === getCarId(car)
+            ? { ...c, available: !car.available }
+            : c,
+        ),
+      );
     } catch (err) {
-      setError(err.message || "Failed to toggle availability");
+      setError(err.message);
     }
   };
 
-  // Clean up object URLs on unmount
-  useEffect(() => {
-    return () => {
-      imagePreviews.forEach((url) => URL.revokeObjectURL(url));
-    };
-  }, [imagePreviews]);
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <div className="text-lg font-medium text-muted-foreground">Loading cars...</div>
-          {error && <div className="text-sm text-destructive mt-2">{error}</div>}
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg font-semibold opacity-70 animate-pulse">
+          🔄 Loading cars...
+          {error && <div className="text-sm text-red-500 mt-2">{error}</div>}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="border-b bg-card shadow-sm sticky top-0 z-40 backdrop-blur-sm">
+      <header className="border-b bg-white shadow-sm">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-card-foreground">Admin Dashboard</h1>
-            <p className="text-sm text-muted-foreground mt-1">Manage your car inventory</p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              🚗 Admin Dashboard
+            </h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Manage your car inventory
+            </p>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => navigate("/")}
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
-              Customer View
+            <button
+              onClick={() =>
+                setActiveView(activeView === "grid" ? "table" : "grid")
+              }
+              className="border border-gray-300 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              {activeView === "grid" ? "📊 Table View" : "🖼️ Grid View"}
             </button>
-            <button onClick={handleLogout}
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 bg-destructive text-destructive-foreground hover:bg-destructive/90 h-10 px-4 py-2">
-              Logout
+            <button
+              onClick={() => navigate("/")}
+              className="border border-gray-300 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              👁️ Customer View
+            </button>
+            <button
+              onClick={handleLogout}
+              className="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors"
+            >
+              🚪 Logout
             </button>
           </div>
         </div>
       </header>
 
       <div className="container mx-auto px-6 py-6">
+        {/* Debug Actions */}
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+          <h3 className="font-semibold text-yellow-800 mb-2">🔧 Debug Tools</h3>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={testUploadEndpoint}
+              className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
+            >
+              Test Backend
+            </button>
+            <button
+              onClick={testUploadSystem}
+              className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600"
+            >
+              Test Upload System
+            </button>
+            <button
+              onClick={fetchCars}
+              className="bg-purple-500 text-white px-3 py-1 rounded text-sm hover:bg-purple-600"
+            >
+              Refresh Cars
+            </button>
+          </div>
+        </div>
+
         {/* Main Actions */}
-        <div className="bg-card border rounded-lg shadow-sm mb-6">
-          <div className="p-6">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-semibold text-card-foreground">Car Inventory</h2>
-                <p className="text-sm text-muted-foreground mt-1">{cars.length} car{cars.length !== 1 ? 's' : ''} in stock</p>
-              </div>
-              <button onClick={() => { setShowForm(true); setEditingCar(null); resetForm(); }}
-                className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
-                Add New Car
+        <div className="bg-white border rounded-lg shadow-sm mb-6">
+          <div className="p-4">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  setShowForm(true);
+                  setEditingCar(null);
+                  resetForm();
+                }}
+                className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors ml-auto"
+              >
+                ➕ Add New Car
               </button>
             </div>
           </div>
@@ -428,75 +603,191 @@ function AdminDashboard({ onLogout }) {
 
         {/* Error/Success Messages */}
         {error && (
-          <div className={`mb-6 rounded-lg border p-4 ${error.includes("✅") ? "border-green-200 bg-green-50 text-green-800" : error.includes("❌") ? "border-red-200 bg-red-50 text-red-800" : "border-blue-200 bg-blue-50 text-blue-800"}`}>
+          <div
+            className={`mb-6 border rounded-lg p-4 ${
+              error.includes("✅")
+                ? "bg-green-50 border-green-200 text-green-800"
+                : "bg-red-50 border-red-200 text-red-800"
+            }`}
+          >
             <div className="flex justify-between items-center">
               <span>{error}</span>
-              <button onClick={() => setError("")} className="text-sm underline hover:no-underline">Dismiss</button>
+              <button
+                onClick={() => setError("")}
+                className="text-sm underline hover:no-underline"
+              >
+                Dismiss
+              </button>
             </div>
           </div>
         )}
 
-        {/* Car Inventory Grid */}
-        <div className="bg-card border rounded-lg shadow-sm">
+        {/* Car Inventory */}
+        <div className="bg-white border rounded-lg shadow-sm">
           <div className="p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Car Inventory
+              </h2>
+              <span className="bg-gray-100 text-gray-700 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                {cars.length} cars
+              </span>
+            </div>
+
             {cars.length === 0 ? (
               <div className="text-center py-12">
-                <div className="text-muted-foreground mb-4">No cars found in the database.</div>
-                <button onClick={() => setShowForm(true)} className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">Add Your First Car</button>
+                <div className="text-gray-500 mb-4">
+                  No cars found in the database.
+                </div>
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800"
+                >
+                  Add Your First Car
+                </button>
               </div>
-            ) : (
+            ) : activeView === "grid" ? (
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {cars.map((car) => {
                   const images = getAllImages(car);
                   const primaryImage = getPrimaryImage(car);
+
                   return (
-                    <div key={getCarId(car)} className={`group relative border rounded-lg overflow-hidden bg-card shadow-sm hover:shadow-md transition-all duration-200 ${!car.available ? "opacity-60" : "hover:-translate-y-1"}`}>
-                      <div className="relative aspect-[4/3] overflow-hidden">
-                        <img src={primaryImage} alt={`${car.brand} ${car.model}`} className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300 cursor-zoom-in" onClick={() => setLightbox({ open: true, images, index: 0 })} onError={(e) => { e.target.src = PLACEHOLDER_ERROR_IMAGE; }} />
-                        <div className="absolute top-3 right-3 flex flex-col gap-1">
-                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${car.available ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>{car.available ? "Available" : "Unavailable"}</span>
-                          <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">{car.year}</span>
+                    <div
+                      key={getCarId(car)}
+                      className={`border rounded-lg overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow ${
+                        !car.available ? "opacity-60" : ""
+                      }`}
+                    >
+                      {/* Image Section */}
+                      <div className="relative">
+                        <ImageSlider
+                          images={images}
+                          onClick={() =>
+                            setLightbox({
+                              open: true,
+                              images: images,
+                              index: 0,
+                            })
+                          }
+                        />
+
+                        <div className="absolute top-2 right-2 flex gap-1">
+                          <span
+                            className={`text-xs px-2 py-1 rounded ${
+                              car.available
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {car.available ? "Available" : "Unavailable"}
+                          </span>
+                          <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                            {car.year}
+                          </span>
                         </div>
                       </div>
 
+                      {/* Content Section */}
                       <div className="p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <h3 className="font-semibold text-lg leading-tight text-card-foreground">{car.brand} {car.model}</h3>
-                        </div>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground mb-3">
-                          <span>₹{car.price?.toLocaleString()}</span>
-                          <span>•</span>
-                          <span>{car.fuelType}</span>
-                          <span>•</span>
-                          <span>{car.transmission}</span>
+                        <h3 className="font-semibold text-lg mb-1">
+                          {car.brand} {car.model}
+                        </h3>
+                        <div className="text-sm text-gray-600 mb-3">
+                          ₹{car.price?.toLocaleString()} • {car.fuelType} •{" "}
+                          {car.transmission}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mb-4">
-                          <div className="flex items-center gap-1"><span>📍 {car.location}</span></div>
-                          <div className="flex items-center gap-1"><span>👤 {car.owners}</span></div>
-                        </div>
-
+                        {/* Image Thumbnails */}
                         {images.length > 0 && (
-                          <div className="mb-4">
+                          <div className="mb-3">
                             <div className="flex gap-2 overflow-x-auto pb-2">
-                              {images.slice(0, 4).map((image, index) => (
-                                <img key={index} src={image} alt={`${car.brand} ${car.model} - Image ${index + 1}`} className="w-10 h-10 object-cover rounded border cursor-pointer flex-shrink-0 hover:opacity-80 transition-opacity" onClick={() => setLightbox({ open: true, images, index })} onError={(e) => { e.target.src = PLACEHOLDER_ERROR_IMAGE; }} />
+                              {images.slice(0, 5).map((image, index) => (
+                                <img
+                                  key={index}
+                                  src={image}
+                                  alt={`${car.brand} ${car.model} - Image ${index + 1}`}
+                                  className="w-12 h-12 object-cover rounded border cursor-pointer flex-shrink-0"
+                                  onClick={() =>
+                                    setLightbox({
+                                      open: true,
+                                      images: images,
+                                      index: index,
+                                    })
+                                  }
+                                  onError={(e) => {
+                                    e.target.src = PLACEHOLDER_ERROR_IMAGE;
+                                  }}
+                                />
                               ))}
-                              {images.length > 4 && (<button className="text-xs text-primary underline self-center hover:no-underline" onClick={() => setLightbox({ open: true, images, index: 4 })}>+{images.length - 4}</button>)}
+                              {images.length > 5 && (
+                                <button
+                                  className="text-xs text-blue-600 underline self-center"
+                                  onClick={() =>
+                                    setLightbox({
+                                      open: true,
+                                      images: images,
+                                      index: 5,
+                                    })
+                                  }
+                                >
+                                  +{images.length - 5} more
+                                </button>
+                              )}
                             </div>
                           </div>
                         )}
 
-                        <div className="flex gap-2">
-                          <button onClick={() => toggleAvailability(car)} className={`inline-flex flex-1 items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3 ${car.available ? "text-yellow-600 border-yellow-200" : "text-green-600 border-green-200"}`}>{car.available ? "Make Unavailable" : "Make Available"}</button>
-                          <button onClick={() => handleEdit(car)} className="inline-flex flex-1 items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3">Edit</button>
-                          <button onClick={() => handleDelete(getCarId(car))} className="inline-flex flex-1 items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 bg-destructive text-destructive-foreground hover:bg-destructive/90 h-9 px-3">Delete</button>
+                        {/* Action Buttons */}
+                        <div className="flex gap-2 mt-4">
+                          <button
+                            onClick={() => toggleAvailability(car)}
+                            className={`flex-1 border px-3 py-2 rounded text-sm ${
+                              car.available
+                                ? "border-yellow-500 text-yellow-700 hover:bg-yellow-50"
+                                : "border-green-500 text-green-700 hover:bg-green-50"
+                            }`}
+                          >
+                            {car.available
+                              ? "Make Unavailable"
+                              : "Make Available"}
+                          </button>
+                          <button
+                            onClick={() => handleEdit(car)}
+                            className="flex-1 border border-blue-500 text-blue-700 px-3 py-2 rounded text-sm hover:bg-blue-50"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(getCarId(car))}
+                            className="flex-1 bg-red-600 text-white px-3 py-2 rounded text-sm hover:bg-red-700"
+                          >
+                            Delete
+                          </button>
                         </div>
                       </div>
                     </div>
                   );
                 })}
               </div>
+            ) : (
+              <TableView
+                cars={cars}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onToggleAvailability={toggleAvailability}
+                getCarId={getCarId}
+                getPrimaryImage={getPrimaryImage}
+                getAllImages={getAllImages}
+                PLACEHOLDER_ERROR_IMAGE={PLACEHOLDER_ERROR_IMAGE}
+                onOpenLightbox={(images, index) =>
+                  setLightbox({
+                    open: true,
+                    images,
+                    index,
+                  })
+                }
+              />
             )}
           </div>
         </div>
@@ -504,78 +795,256 @@ function AdminDashboard({ onLogout }) {
 
       {/* Add/Edit Car Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-hidden">
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-xl font-semibold text-card-foreground">{editingCar ? "Edit Car" : "Add New Car"}</h2>
-              <button onClick={() => setShowForm(false)} className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"><span className="sr-only">Close</span><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+              <h2 className="text-xl font-semibold">
+                {editingCar ? "Edit Car" : "Add New Car"}
+              </h2>
+              <button
+                onClick={() => setShowForm(false)}
+                className="text-gray-500 hover:text-gray-700 text-lg"
+              >
+                ✕
+              </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[70vh]">
+            <form
+              onSubmit={handleSubmit}
+              className="p-6 overflow-y-auto max-h-[70vh]"
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                <InputField label="Brand *" name="brand" value={formData.brand} onChange={handleInputChange} required maxLength={64} />
-                <InputField label="Model *" name="model" value={formData.model} onChange={handleInputChange} required maxLength={64} />
-                <InputField label="Year *" name="year" type="number" value={formData.year} onChange={handleInputChange} required min={1886} max={2030} />
-                <InputField label="Price *" name="price" type="number" value={formData.price} onChange={handleInputChange} required min={0} max={1000000} />
-                <SelectField label="Fuel Type *" name="fuelType" value={formData.fuelType} onChange={handleInputChange} options={["Gasoline","Petrol","Diesel","Electric","Hybrid","CNG"]} required />
-                <InputField label="Mileage (km)" name="mileage" type="number" value={formData.mileage} onChange={handleInputChange} min={0} max={1000000} />
-                <InputField label="Color" name="color" value={formData.color} onChange={handleInputChange} maxLength={64} />
-                <SelectField label="Transmission" name="transmission" value={formData.transmission} onChange={handleInputChange} options={["Manual","Automatic","AMT","CVT","DCT"]} />
-                <SelectField label="Owners" name="owners" value={formData.owners} onChange={handleInputChange} options={["1st Owner","2nd Owner","3rd Owner","4th Owner+"]} />
-                <SelectField label="Type" name="type" value={formData.type} onChange={handleInputChange} options={["Sedan","SUV","Hatchback","Coupe","Convertible","Minivan","Pickup"]} />
-                <InputField label="Seating Capacity" name="seatingCapacity" type="number" value={formData.seatingCapacity} onChange={handleInputChange} min={1} max={20} />
-                <InputField label="Location" name="location" value={formData.location} onChange={handleInputChange} maxLength={128} />
+                <Input
+                  label="Brand *"
+                  name="brand"
+                  value={formData.brand}
+                  onChange={handleInputChange}
+                  required
+                  maxLength={64}
+                />
+                <Input
+                  label="Model *"
+                  name="model"
+                  value={formData.model}
+                  onChange={handleInputChange}
+                  required
+                  maxLength={64}
+                />
+                <Input
+                  label="Year *"
+                  name="year"
+                  type="number"
+                  value={formData.year}
+                  onChange={handleInputChange}
+                  required
+                  min={1886}
+                  max={2030}
+                />
+                <Input
+                  label="Price *"
+                  name="price"
+                  type="number"
+                  value={formData.price}
+                  onChange={handleInputChange}
+                  required
+                  min={0}
+                  max={1000000}
+                />
+                <Select
+                  label="Fuel Type *"
+                  name="fuelType"
+                  value={formData.fuelType}
+                  onChange={handleInputChange}
+                  options={[
+                    "Gasoline",
+                    "Petrol",
+                    "Diesel",
+                    "Electric",
+                    "Hybrid",
+                    "CNG",
+                  ]}
+                  required
+                />
+                <Input
+                  label="Mileage (km)"
+                  name="mileage"
+                  type="number"
+                  value={formData.mileage}
+                  onChange={handleInputChange}
+                  min={0}
+                  max={1000000}
+                />
+                <Input
+                  label="Color"
+                  name="color"
+                  value={formData.color}
+                  onChange={handleInputChange}
+                  maxLength={64}
+                />
+                <Select
+                  label="Transmission"
+                  name="transmission"
+                  value={formData.transmission}
+                  onChange={handleInputChange}
+                  options={["Manual", "Automatic", "AMT", "CVT", "DCT"]}
+                />
+                <Select
+                  label="Owners"
+                  name="owners"
+                  value={formData.owners}
+                  onChange={handleInputChange}
+                  options={[
+                    "1st Owner",
+                    "2nd Owner",
+                    "3rd Owner",
+                    "4th Owner+",
+                  ]}
+                />
+                <Select
+                  label="Type"
+                  name="type"
+                  value={formData.type}
+                  onChange={handleInputChange}
+                  options={[
+                    "Sedan",
+                    "SUV",
+                    "Hatchback",
+                    "Coupe",
+                    "Convertible",
+                    "Minivan",
+                    "Pickup",
+                  ]}
+                />
+                <Input
+                  label="Seating Capacity"
+                  name="seatingCapacity"
+                  type="number"
+                  value={formData.seatingCapacity}
+                  onChange={handleInputChange}
+                  min={1}
+                  max={20}
+                />
+                <Input
+                  label="Location"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleInputChange}
+                  maxLength={128}
+                />
               </div>
 
+              {/* Features */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-card-foreground mb-2">Features (comma-separated)</label>
-                <textarea name="features" value={formData.features} onChange={handleInputChange} className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" maxLength={512} placeholder="AC, Power Steering, Music System, Sunroof..." rows={3} />
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Features (comma-separated)
+                </label>
+                <textarea
+                  name="features"
+                  value={formData.features}
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  maxLength={512}
+                  placeholder="AC, Power Steering, Music System, Sunroof..."
+                  rows={3}
+                />
               </div>
 
-              <div className="flex items-center space-x-2 mb-6">
-                <input type="checkbox" name="available" checked={formData.available} onChange={handleInputChange} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
-                <label className="text-sm font-medium text-card-foreground">Available for rent/sale</label>
+              {/* Availability */}
+              <div className="flex items-center gap-2 mb-6">
+                <input
+                  type="checkbox"
+                  name="available"
+                  checked={formData.available}
+                  onChange={handleInputChange}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label className="text-sm font-medium text-gray-700">
+                  Available for rent/sale
+                </label>
               </div>
 
               {/* Multiple Images Upload */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-card-foreground mb-2">Upload Images (max 10 files, 8MB each)</label>
-                <div className="flex items-center gap-4">
-                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-background hover:bg-accent/50 transition-colors">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <svg className="w-8 h-8 mb-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                      <p className="mb-2 text-sm text-muted-foreground">Click to upload images</p>
-                    </div>
-                    <input type="file" accept="image/*" multiple onChange={handleFilesChange} className="hidden" />
-                  </label>
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Upload Images (max 10 files, 8MB each)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFilesChange}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
 
+                {/* New Image Previews */}
                 {imagePreviews.length > 0 && (
                   <div className="mt-4">
-                    <p className="text-sm font-medium text-card-foreground mb-2">New Images to Upload ({imagePreviews.length})</p>
-                    <div className="flex gap-2 flex-wrap">{imagePreviews.map((preview, index) => (
-                      <div key={index} className="relative group">
-                        <img src={preview} alt={`Preview ${index + 1}`} className="w-20 h-20 object-cover rounded-lg border" />
-                        <button type="button" onClick={() => removeImage(index)} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full w-5 h-5 text-xs flex items-center justify-center hover:bg-destructive/90 transition-colors">×</button>
-                      </div>
-                    ))}</div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      New Images to Upload ({imagePreviews.length})
+                    </p>
+                    <div className="flex gap-2 flex-wrap">
+                      {imagePreviews.map((preview, index) => (
+                        <div key={index} className="relative">
+                          <img
+                            src={preview}
+                            alt={`Preview ${index + 1}`}
+                            className="w-20 h-20 object-cover rounded-lg border"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeImage(index)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center hover:bg-red-600"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 
+                {/* Existing Images */}
                 {formData.images?.length > 0 && (
                   <div className="mt-4">
-                    <p className="text-sm font-medium text-card-foreground mb-2">Existing Images ({formData.images.length})</p>
-                    <div className="flex gap-2 flex-wrap">{formData.images.map((image, index) => (
-                      <img key={index} src={image} alt={`Existing ${index + 1}`} className="w-16 h-16 object-cover rounded-lg border" onError={(e) => { e.target.src = PLACEHOLDER_ERROR_IMAGE; }} />
-                    ))}</div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      Existing Images ({formData.images.length})
+                    </p>
+                    <div className="flex gap-2 flex-wrap">
+                      {formData.images.map((image, index) => (
+                        <img
+                          key={index}
+                          src={image}
+                          alt={`Existing ${index + 1}`}
+                          className="w-16 h-16 object-cover rounded-lg border"
+                          onError={(e) => {
+                            e.target.src = PLACEHOLDER_ERROR_IMAGE;
+                          }}
+                        />
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
 
+              {/* Form Actions */}
               <div className="flex gap-3 justify-end pt-6 border-t">
-                <button type="button" onClick={() => setShowForm(false)} className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">Cancel</button>
-                <button type="submit" disabled={uploading} className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                  {uploading ? (<><div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2"></div>Uploading...</>) : editingCar ? "Update Car" : "Add Car"}
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                  className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploading}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {uploading
+                    ? "Uploading..."
+                    : editingCar
+                      ? "Update Car"
+                      : "Add Car"}
                 </button>
               </div>
             </form>
@@ -584,29 +1053,160 @@ function AdminDashboard({ onLogout }) {
       )}
 
       {/* Lightbox/Carousel */}
-      {lightbox.open && <Lightbox images={lightbox.images} index={lightbox.index} onClose={() => setLightbox({ open: false, images: [], index: 0 })} />}
+      {lightbox.open && (
+        <Lightbox
+          images={lightbox.images}
+          index={lightbox.index}
+          onClose={() => setLightbox({ open: false, images: [], index: 0 })}
+        />
+      )}
     </div>
   );
 }
 
 // Reusable Input Component
-function InputField({ label, ...props }) {
+function Input({ label, ...props }) {
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-card-foreground">{label}</label>
-      <input {...props} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" />
+      <label className="block text-sm font-medium text-gray-700">{label}</label>
+      <input
+        {...props}
+        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      />
     </div>
   );
 }
 
 // Reusable Select Component
-function SelectField({ label, name, value, onChange, options = [], required }) {
+function Select({ label, name, value, onChange, options = [], required }) {
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-card-foreground">{label}</label>
-      <select name={name} value={value} onChange={onChange} required={required} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-        {options.map((option) => (<option key={option} value={option}>{option}</option>))}
+      <label className="block text-sm font-medium text-gray-700">{label}</label>
+      <select
+        name={name}
+        value={value}
+        onChange={onChange}
+        required={required}
+        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
       </select>
+    </div>
+  );
+}
+
+// Table View Component
+function TableView({
+  cars,
+  onEdit,
+  onDelete,
+  onToggleAvailability,
+  getCarId,
+  getPrimaryImage,
+  getAllImages,
+  PLACEHOLDER_ERROR_IMAGE,
+  onOpenLightbox,
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b bg-gray-50">
+            <th className="text-left py-3 px-4 font-semibold text-gray-900">
+              Image
+            </th>
+            <th className="text-left py-3 px-4 font-semibold text-gray-900">
+              Brand & Model
+            </th>
+            <th className="text-left py-3 px-4 font-semibold text-gray-900">
+              Year
+            </th>
+            <th className="text-left py-3 px-4 font-semibold text-gray-900">
+              Price
+            </th>
+            <th className="text-left py-3 px-4 font-semibold text-gray-900">
+              Fuel
+            </th>
+            <th className="text-left py-3 px-4 font-semibold text-gray-900">
+              Status
+            </th>
+            <th className="text-left py-3 px-4 font-semibold text-gray-900">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {cars.map((car) => {
+            const carId = getCarId(car);
+            const primaryImage = getPrimaryImage(car);
+            const allImages = getAllImages(car);
+
+            return (
+              <tr
+                key={carId}
+                className="border-b hover:bg-gray-50 transition-colors"
+              >
+                <td className="py-3 px-4">
+                  <img
+                    src={primaryImage}
+                    alt={car.model}
+                    className="w-16 h-12 object-cover rounded cursor-zoom-in border"
+                    onClick={() => onOpenLightbox(allImages, 0)}
+                    onError={(e) => {
+                      e.target.src = PLACEHOLDER_ERROR_IMAGE;
+                    }}
+                  />
+                </td>
+                <td className="py-3 px-4 font-medium text-gray-900">
+                  {car.brand} {car.model}
+                </td>
+                <td className="py-3 px-4 text-gray-700">{car.year}</td>
+                <td className="py-3 px-4 text-gray-700">
+                  ₹{car.price?.toLocaleString()}
+                </td>
+                <td className="py-3 px-4 text-gray-700">{car.fuelType}</td>
+                <td className="py-3 px-4">
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-medium ${
+                      car.available
+                        ? "bg-green-100 text-green-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {car.available ? "Available" : "Unavailable"}
+                  </span>
+                </td>
+                <td className="py-3 px-4">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => onToggleAvailability(car)}
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      Toggle
+                    </button>
+                    <button
+                      onClick={() => onEdit(car)}
+                      className="text-green-600 hover:text-green-800 text-sm font-medium"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => onDelete(carId)}
+                      className="text-red-600 hover:text-red-800 text-sm font-medium"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -621,32 +1221,177 @@ function Lightbox({ images, index = 0, onClose }) {
       if (e.key === "ArrowRight") nextImage();
       if (e.key === "ArrowLeft") prevImage();
     };
+
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  const nextImage = () => setCurrentIndex((prev) => (prev + 1) % images.length);
-  const prevImage = () => setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
+  const nextImage = () => {
+    setCurrentIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const prevImage = () => {
+    setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
 
   if (!images.length) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/95 flex items-center justify-center">
-      <button onClick={onClose} className="absolute top-4 right-4 text-card-foreground hover:text-muted-foreground transition-colors z-10"><svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-      {images.length > 1 && (<><button onClick={prevImage} className="absolute left-4 text-card-foreground hover:text-muted-foreground transition-colors z-10"><svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg></button>
-      <button onClick={nextImage} className="absolute right-4 text-card-foreground hover:text-muted-foreground transition-colors z-10"><svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg></button></>)}
+    <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center">
+      {/* Close Button */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 text-white text-2xl hover:text-gray-300 transition-colors z-10"
+      >
+        ✕
+      </button>
 
+      {/* Navigation Buttons */}
+      {images.length > 1 && (
+        <>
+          <button
+            onClick={prevImage}
+            className="absolute left-4 text-white text-4xl hover:text-gray-300 transition-colors z-10"
+          >
+            ‹
+          </button>
+          <button
+            onClick={nextImage}
+            className="absolute right-4 text-white text-4xl hover:text-gray-300 transition-colors z-10"
+          >
+            ›
+          </button>
+        </>
+      )}
+
+      {/* Main Image */}
       <div className="relative max-w-4xl max-h-full w-full h-full flex items-center justify-center p-4">
-        <img src={images[currentIndex]} alt={`Image ${currentIndex + 1}`} className="max-w-full max-h-full object-contain rounded-lg" onError={(e) => { e.target.src = PLACEHOLDER_ERROR_IMAGE; }} />
+        <img
+          src={images[currentIndex]}
+          alt={`Image ${currentIndex + 1}`}
+          className="max-w-full max-h-full object-contain rounded-lg"
+          onError={(e) => {
+            e.target.src =
+              "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23fef2f2'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%23dc2626'%3EImage Error%3C/text%3E%3C/svg%3E";
+          }}
+        />
       </div>
 
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-card-foreground text-sm bg-background/80 backdrop-blur-sm px-3 py-1 rounded-full">{currentIndex + 1} / {images.length}</div>
+      {/* Image Counter */}
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded-full">
+        {currentIndex + 1} / {images.length}
+      </div>
 
+      {/* Thumbnails */}
       {images.length > 1 && (
         <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 overflow-x-auto max-w-[90vw] pb-2">
-          {images.map((image, idx) => (<img key={idx} src={image} alt={`Thumbnail ${idx + 1}`} onClick={() => setCurrentIndex(idx)} className={`w-12 h-12 object-cover rounded border cursor-pointer flex-shrink-0 transition-all ${currentIndex === idx ? "ring-2 ring-primary ring-opacity-80" : "opacity-70 hover:opacity-100"}`} onError={(e) => { e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' fill='%23fef2f2'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='8' fill='%23dc2626'%3EE%3C/text%3E%3C/svg%3E"; }} />))}
+          {images.map((image, idx) => (
+            <img
+              key={idx}
+              src={image}
+              alt={`Thumbnail ${idx + 1}`}
+              onClick={() => setCurrentIndex(idx)}
+              className={`w-12 h-12 object-cover rounded border cursor-pointer flex-shrink-0 transition-all ${
+                currentIndex === idx
+                  ? "ring-2 ring-white ring-opacity-80"
+                  : "opacity-70 hover:opacity-100"
+              }`}
+              onError={(e) => {
+                e.target.src =
+                  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' fill='%23fef2f2'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='8' fill='%23dc2626'%3EE%3C/text%3E%3C/svg%3E";
+              }}
+            />
+          ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function ImageSlider({ images, height = "h-48", onClick }) {
+  const [index, setIndex] = React.useState(() => 0);
+  const [paused, setPaused] = React.useState(false);
+
+  // ✅ ADD THIS
+  React.useEffect(() => {
+    setIndex(0);
+  }, [images]);
+
+  React.useEffect(() => {
+    if (images.length <= 1 || paused) return;
+
+    let mounted = true;
+
+    const timer = setInterval(() => {
+      if (mounted) {
+        setIndex((prev) => (prev + 1) % images.length);
+      }
+    }, 3000);
+
+    return () => {
+      mounted = false;
+      clearInterval(timer);
+    };
+  }, [images, paused]);
+
+  if (!images.length) return null;
+
+  return (
+    <div
+      className={`relative w-full overflow-hidden ${height}`}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      <img
+        src={images[index]}
+        loading="lazy"
+        className="w-full h-full object-cover cursor-pointer"
+        onClick={onClick}
+        onError={(e) => {
+          e.target.src =
+            "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23fef2f2'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%23dc2626'%3EImage Error%3C/text%3E%3C/svg%3E";
+        }}
+      />
+
+      {images.length > 1 && (
+        <>
+          {/* Left */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIndex((index - 1 + images.length) % images.length);
+            }}
+            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white px-3 py-2 rounded-full"
+          >
+            ‹
+          </button>
+
+          {/* Right */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIndex((index + 1) % images.length);
+            }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white px-3 py-2 rounded-full"
+          >
+            ›
+          </button>
+        </>
+      )}
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+        {images.map((_, i) => (
+          <span
+            key={i}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIndex(i);
+            }}
+            className={`w-2 h-2 rounded-full cursor-pointer ${
+              index === i ? "bg-white" : "bg-white/50"
+            }`}
+          />
+        ))}
+      </div>
     </div>
   );
 }
