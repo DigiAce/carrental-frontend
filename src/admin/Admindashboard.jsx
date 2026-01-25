@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 // Assumes backend endpoints at http://localhost:5001/api
 
 function AdminDashboard({ onLogout }) {
-  const BACKEND_URL = "http://localhost:5001/api";
+  const BACKEND_URL = `${import.meta.env.VITE_API_URL}/api`;
   const TOKEN_KEY = "token"; // confirmed by you
 
   const PLACEHOLDER_CAR_IMAGE =
