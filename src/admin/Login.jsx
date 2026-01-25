@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+const BACKEND_URL = `${import.meta.env.VITE_API_URL}/api`;
 
 function Login({ onLogin }) {
   const [formData, setFormData] = useState({ username: "", password: "" });
@@ -20,7 +21,7 @@ function Login({ onLogin }) {
   const checkBackendConnection = async () => {
     try {
       setBackendStatus("checking");
-      const response = await fetch("http://localhost:5001/api/health");
+      const response = await fetch(`${BACKEND_URL}/health`);
       const data = await response.json();
       if (response.ok && data.success) setBackendStatus("connected");
       else setBackendStatus("disconnected");
@@ -38,7 +39,7 @@ function Login({ onLogin }) {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("http://localhost:5001/api/login", {
+      const response = await fetch(`${BACKEND_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
