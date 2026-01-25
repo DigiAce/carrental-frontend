@@ -5,8 +5,10 @@ import { useNavigate } from "react-router-dom";
 function AdminDashboard({ onLogout }) {
   const BACKEND_URL = `${import.meta.env.VITE_API_URL}/api`;
 
-  const PLACEHOLDER_CAR_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%236b7280'%3ECar Image%3C/text%3E%3C/svg%3E";
-  const PLACEHOLDER_ERROR_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23fef2f2'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%23dc2626'%3EImage Error%3C/text%3E%3C/svg%3E";
+  const PLACEHOLDER_CAR_IMAGE =
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%236b7280'%3ECar Image%3C/text%3E%3C/svg%3E";
+  const PLACEHOLDER_ERROR_IMAGE =
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23fef2f2'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%23dc2626'%3EImage Error%3C/text%3E%3C/svg%3E";
 
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -83,7 +85,9 @@ function AdminDashboard({ onLogout }) {
       const data = await res.json();
 
       // server returns { success: true, data: [...] }
-      const docs = Array.isArray(data) ? data : data.data || data.documents || [];
+      const docs = Array.isArray(data)
+        ? data
+        : data.data || data.documents || [];
 
       console.log(`✅ Loaded ${docs.length} cars`);
       setCars(docs);
@@ -156,7 +160,9 @@ function AdminDashboard({ onLogout }) {
 
   const validateForm = () => {
     const required = ["brand", "model", "year", "price", "fuelType"];
-    const missing = required.filter((field) => !formData[field]?.toString().trim());
+    const missing = required.filter(
+      (field) => !formData[field]?.toString().trim(),
+    );
 
     if (missing.length) {
       throw new Error(`Missing required fields: ${missing.join(", ")}`);
@@ -227,7 +233,9 @@ function AdminDashboard({ onLogout }) {
       console.log("📄 Response data:", result);
 
       if (!res.ok) {
-        throw new Error(result?.error || `Upload failed with status ${res.status}`);
+        throw new Error(
+          result?.error || `Upload failed with status ${res.status}`,
+        );
       }
 
       // Your server sends back: { success: true, total: N, files: [{ success: true, url, id, name }, ...] }
@@ -267,14 +275,16 @@ function AdminDashboard({ onLogout }) {
       const healthData = await healthRes.json();
       console.log("Health:", healthData);
 
-      if (!healthRes.ok) throw new Error(`Health check failed: ${healthData?.error}`);
+      if (!healthRes.ok)
+        throw new Error(`Health check failed: ${healthData?.error}`);
       // Test 2: Upload endpoint (debug)
       console.log("2. Testing upload endpoint (debug)...");
       const testRes = await fetch(`${BACKEND_URL}/debug/upload-test`);
       const testData = await testRes.json();
       console.log("Upload test:", testData);
 
-      if (!testRes.ok) throw new Error(`Upload endpoint test failed: ${testData?.error}`);
+      if (!testRes.ok)
+        throw new Error(`Upload endpoint test failed: ${testData?.error}`);
 
       setError(`✅ Upload system working! Backend is connected.`);
       console.log("=== UPLOAD SYSTEM TEST COMPLETE ===");
@@ -290,7 +300,9 @@ function AdminDashboard({ onLogout }) {
       setError("Testing backend...");
       const res = await fetch(`${BACKEND_URL}/health`);
       const data = await res.json();
-      setError(`Backend status: ${data.success ? "✅ Connected" : "❌ Failed"}`);
+      setError(
+        `Backend status: ${data.success ? "✅ Connected" : "❌ Failed"}`,
+      );
     } catch (err) {
       setError(`❌ Backend connection failed: ${err.message}`);
     }
@@ -313,7 +325,10 @@ function AdminDashboard({ onLogout }) {
       }
 
       // Combine new and existing images (formData.images contains existing image URLs)
-      const allImages = [...uploadedUrls, ...(Array.isArray(formData.images) ? formData.images : [])];
+      const allImages = [
+        ...uploadedUrls,
+        ...(Array.isArray(formData.images) ? formData.images : []),
+      ];
 
       const payload = {
         brand: formData.brand,
@@ -328,16 +343,23 @@ function AdminDashboard({ onLogout }) {
         transmission: formData.transmission,
         owners: formData.owners,
         type: formData.type,
-        seatingCapacity: formData.seatingCapacity ? parseInt(formData.seatingCapacity, 10) : 5,
+        seatingCapacity: formData.seatingCapacity
+          ? parseInt(formData.seatingCapacity, 10)
+          : 5,
         location: formData.location,
         available: formData.available,
         features:
           typeof formData.features === "string" && formData.features.trim()
-            ? formData.features.split(",").map((f) => f.trim()).filter(Boolean)
+            ? formData.features
+                .split(",")
+                .map((f) => f.trim())
+                .filter(Boolean)
             : [],
       };
 
-      const url = editingCar ? `${BACKEND_URL}/cars/${getCarId(editingCar)}` : `${BACKEND_URL}/cars`;
+      const url = editingCar
+        ? `${BACKEND_URL}/cars/${getCarId(editingCar)}`
+        : `${BACKEND_URL}/cars`;
       const method = editingCar ? "PUT" : "POST";
 
       console.log("📦 Sending payload:", payload);
@@ -354,7 +376,9 @@ function AdminDashboard({ onLogout }) {
       const result = await res.json().catch(() => ({}));
 
       if (!res.ok || !result?.success) {
-        throw new Error(result?.error || `Failed to ${editingCar ? "update" : "create"} car`);
+        throw new Error(
+          result?.error || `Failed to ${editingCar ? "update" : "create"} car`,
+        );
       }
 
       // success — reload cars and clear the form + previews
@@ -419,30 +443,32 @@ function AdminDashboard({ onLogout }) {
       seatingCapacity: car.seatingCapacity?.toString() || "5",
       location: car.location || "Main Branch",
       available: car.available !== undefined ? car.available : true,
-      features: Array.isArray(car.features) ? car.features.join(", ") : car.features || "",
+      features: Array.isArray(car.features)
+        ? car.features.join(", ")
+        : car.features || "",
     });
     setShowForm(true);
   };
 
- const handleDelete = async (carId) => {
+  const handleDelete = async (carId) => {
     if (!window.confirm("Are you sure you want to delete this car?")) return;
-    
+
     try {
       const token = getAuthToken();
       if (!token) throw new Error("No authentication token found");
-      
+
       const res = await fetch(`${BACKEND_URL}/cars/${carId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
 
       const result = await res.json().catch(() => ({}));
-      
+
       if (!res.ok || !result?.success) {
         throw new Error(result?.error || "Delete failed");
       }
 
-      setCars(prev => prev.filter(car => getCarId(car) !== carId));
+      setCars((prev) => prev.filter((car) => getCarId(car) !== carId));
       setError("✅ Car deleted successfully!");
       setTimeout(() => setError(""), 3000);
     } catch (err) {
@@ -454,25 +480,29 @@ function AdminDashboard({ onLogout }) {
     try {
       const token = getAuthToken();
       if (!token) throw new Error("No authentication token found");
-      
+
       const res = await fetch(`${BACKEND_URL}/cars/${getCarId(car)}`, {
         method: "PUT",
-        headers: { 
-          Authorization: `Bearer ${token}`, 
-          "Content-Type": "application/json" 
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ available: !car.available }),
       });
 
       const result = await res.json().catch(() => ({}));
-      
+
       if (!res.ok || !result?.success) {
         throw new Error(result?.error || "Update failed");
       }
 
-      setCars(prev => prev.map(c => 
-        getCarId(c) === getCarId(car) ? { ...c, available: !car.available } : c
-      ));
+      setCars((prev) =>
+        prev.map((c) =>
+          getCarId(c) === getCarId(car)
+            ? { ...c, available: !car.available }
+            : c,
+        ),
+      );
     } catch (err) {
       setError(err.message);
     }
@@ -489,31 +519,36 @@ function AdminDashboard({ onLogout }) {
     );
   }
 
- 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="border-b bg-white shadow-sm">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">🚗 Admin Dashboard</h1>
-            <p className="text-sm text-gray-600 mt-1">Manage your car inventory</p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              🚗 Admin Dashboard
+            </h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Manage your car inventory
+            </p>
           </div>
           <div className="flex gap-2">
-            <button 
-              onClick={() => setActiveView(activeView === "grid" ? "table" : "grid")} 
+            <button
+              onClick={() =>
+                setActiveView(activeView === "grid" ? "table" : "grid")
+              }
               className="border border-gray-300 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
             >
               {activeView === "grid" ? "📊 Table View" : "🖼️ Grid View"}
             </button>
-            <button 
-              onClick={() => navigate("/")} 
+            <button
+              onClick={() => navigate("/")}
               className="border border-gray-300 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
             >
               👁️ Customer View
             </button>
-            <button 
-              onClick={handleLogout} 
+            <button
+              onClick={handleLogout}
               className="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors"
             >
               🚪 Logout
@@ -527,19 +562,19 @@ function AdminDashboard({ onLogout }) {
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
           <h3 className="font-semibold text-yellow-800 mb-2">🔧 Debug Tools</h3>
           <div className="flex flex-wrap gap-2">
-            <button 
+            <button
               onClick={testUploadEndpoint}
               className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
             >
               Test Backend
             </button>
-            <button 
+            <button
               onClick={testUploadSystem}
               className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600"
             >
               Test Upload System
             </button>
-            <button 
+            <button
               onClick={fetchCars}
               className="bg-purple-500 text-white px-3 py-1 rounded text-sm hover:bg-purple-600"
             >
@@ -568,14 +603,19 @@ function AdminDashboard({ onLogout }) {
 
         {/* Error/Success Messages */}
         {error && (
-          <div className={`mb-6 border rounded-lg p-4 ${
-            error.includes("✅") 
-              ? "bg-green-50 border-green-200 text-green-800" 
-              : "bg-red-50 border-red-200 text-red-800"
-          }`}>
+          <div
+            className={`mb-6 border rounded-lg p-4 ${
+              error.includes("✅")
+                ? "bg-green-50 border-green-200 text-green-800"
+                : "bg-red-50 border-red-200 text-red-800"
+            }`}
+          >
             <div className="flex justify-between items-center">
               <span>{error}</span>
-              <button onClick={() => setError("")} className="text-sm underline hover:no-underline">
+              <button
+                onClick={() => setError("")}
+                className="text-sm underline hover:no-underline"
+              >
                 Dismiss
               </button>
             </div>
@@ -586,7 +626,9 @@ function AdminDashboard({ onLogout }) {
         <div className="bg-white border rounded-lg shadow-sm">
           <div className="p-6">
             <div className="flex items-center gap-2 mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">Car Inventory</h2>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Car Inventory
+              </h2>
               <span className="bg-gray-100 text-gray-700 text-xs font-medium px-2.5 py-0.5 rounded-full">
                 {cars.length} cars
               </span>
@@ -594,8 +636,10 @@ function AdminDashboard({ onLogout }) {
 
             {cars.length === 0 ? (
               <div className="text-center py-12">
-                <div className="text-gray-500 mb-4">No cars found in the database.</div>
-                <button 
+                <div className="text-gray-500 mb-4">
+                  No cars found in the database.
+                </div>
+                <button
                   onClick={() => setShowForm(true)}
                   className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800"
                 >
@@ -607,35 +651,35 @@ function AdminDashboard({ onLogout }) {
                 {cars.map((car) => {
                   const images = getAllImages(car);
                   const primaryImage = getPrimaryImage(car);
-                  
+
                   return (
-                    <div 
-                      key={getCarId(car)} 
+                    <div
+                      key={getCarId(car)}
                       className={`border rounded-lg overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow ${
                         !car.available ? "opacity-60" : ""
                       }`}
                     >
                       {/* Image Section */}
                       <div className="relative">
-                        <img
-                          src={primaryImage}
-                          alt={`${car.brand} ${car.model}`}
-                          className="w-full h-48 object-cover cursor-zoom-in"
-                          onClick={() => setLightbox({ 
-                            open: true, 
-                            images: images, 
-                            index: 0 
-                          })}
-                          onError={(e) => { 
-                            e.target.src = PLACEHOLDER_ERROR_IMAGE; 
-                          }}
+                        <ImageSlider
+                          images={images}
+                          onClick={() =>
+                            setLightbox({
+                              open: true,
+                              images: images,
+                              index: 0,
+                            })
+                          }
                         />
+
                         <div className="absolute top-2 right-2 flex gap-1">
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            car.available 
-                              ? "bg-green-100 text-green-800" 
-                              : "bg-red-100 text-red-800"
-                          }`}>
+                          <span
+                            className={`text-xs px-2 py-1 rounded ${
+                              car.available
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
                             {car.available ? "Available" : "Unavailable"}
                           </span>
                           <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
@@ -650,7 +694,8 @@ function AdminDashboard({ onLogout }) {
                           {car.brand} {car.model}
                         </h3>
                         <div className="text-sm text-gray-600 mb-3">
-                          ₹{car.price?.toLocaleString()} • {car.fuelType} • {car.transmission}
+                          ₹{car.price?.toLocaleString()} • {car.fuelType} •{" "}
+                          {car.transmission}
                         </div>
 
                         {/* Image Thumbnails */}
@@ -663,24 +708,28 @@ function AdminDashboard({ onLogout }) {
                                   src={image}
                                   alt={`${car.brand} ${car.model} - Image ${index + 1}`}
                                   className="w-12 h-12 object-cover rounded border cursor-pointer flex-shrink-0"
-                                  onClick={() => setLightbox({ 
-                                    open: true, 
-                                    images: images, 
-                                    index: index 
-                                  })}
-                                  onError={(e) => { 
-                                    e.target.src = PLACEHOLDER_ERROR_IMAGE; 
+                                  onClick={() =>
+                                    setLightbox({
+                                      open: true,
+                                      images: images,
+                                      index: index,
+                                    })
+                                  }
+                                  onError={(e) => {
+                                    e.target.src = PLACEHOLDER_ERROR_IMAGE;
                                   }}
                                 />
                               ))}
                               {images.length > 5 && (
-                                <button 
+                                <button
                                   className="text-xs text-blue-600 underline self-center"
-                                  onClick={() => setLightbox({ 
-                                    open: true, 
-                                    images: images, 
-                                    index: 5 
-                                  })}
+                                  onClick={() =>
+                                    setLightbox({
+                                      open: true,
+                                      images: images,
+                                      index: 5,
+                                    })
+                                  }
                                 >
                                   +{images.length - 5} more
                                 </button>
@@ -691,23 +740,25 @@ function AdminDashboard({ onLogout }) {
 
                         {/* Action Buttons */}
                         <div className="flex gap-2 mt-4">
-                          <button 
+                          <button
                             onClick={() => toggleAvailability(car)}
                             className={`flex-1 border px-3 py-2 rounded text-sm ${
-                              car.available 
-                                ? "border-yellow-500 text-yellow-700 hover:bg-yellow-50" 
+                              car.available
+                                ? "border-yellow-500 text-yellow-700 hover:bg-yellow-50"
                                 : "border-green-500 text-green-700 hover:bg-green-50"
                             }`}
                           >
-                            {car.available ? "Make Unavailable" : "Make Available"}
+                            {car.available
+                              ? "Make Unavailable"
+                              : "Make Available"}
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleEdit(car)}
                             className="flex-1 border border-blue-500 text-blue-700 px-3 py-2 rounded text-sm hover:bg-blue-50"
                           >
                             Edit
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleDelete(getCarId(car))}
                             className="flex-1 bg-red-600 text-white px-3 py-2 rounded text-sm hover:bg-red-700"
                           >
@@ -729,11 +780,13 @@ function AdminDashboard({ onLogout }) {
                 getPrimaryImage={getPrimaryImage}
                 getAllImages={getAllImages}
                 PLACEHOLDER_ERROR_IMAGE={PLACEHOLDER_ERROR_IMAGE}
-                onOpenLightbox={(images, index) => setLightbox({ 
-                  open: true, 
-                  images, 
-                  index 
-                })}
+                onOpenLightbox={(images, index) =>
+                  setLightbox({
+                    open: true,
+                    images,
+                    index,
+                  })
+                }
               />
             )}
           </div>
@@ -748,7 +801,7 @@ function AdminDashboard({ onLogout }) {
               <h2 className="text-xl font-semibold">
                 {editingCar ? "Edit Car" : "Add New Car"}
               </h2>
-              <button 
+              <button
                 onClick={() => setShowForm(false)}
                 className="text-gray-500 hover:text-gray-700 text-lg"
               >
@@ -756,20 +809,128 @@ function AdminDashboard({ onLogout }) {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[70vh]">
+            <form
+              onSubmit={handleSubmit}
+              className="p-6 overflow-y-auto max-h-[70vh]"
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                <Input label="Brand *" name="brand" value={formData.brand} onChange={handleInputChange} required maxLength={64} />
-                <Input label="Model *" name="model" value={formData.model} onChange={handleInputChange} required maxLength={64} />
-                <Input label="Year *" name="year" type="number" value={formData.year} onChange={handleInputChange} required min={1886} max={2030} />
-                <Input label="Price *" name="price" type="number" value={formData.price} onChange={handleInputChange} required min={0} max={1000000} />
-                <Select label="Fuel Type *" name="fuelType" value={formData.fuelType} onChange={handleInputChange} options={["Gasoline", "Petrol", "Diesel", "Electric", "Hybrid", "CNG"]} required />
-                <Input label="Mileage (km)" name="mileage" type="number" value={formData.mileage} onChange={handleInputChange} min={0} max={1000000} />
-                <Input label="Color" name="color" value={formData.color} onChange={handleInputChange} maxLength={64} />
-                <Select label="Transmission" name="transmission" value={formData.transmission} onChange={handleInputChange} options={["Manual", "Automatic", "AMT", "CVT", "DCT"]} />
-                <Select label="Owners" name="owners" value={formData.owners} onChange={handleInputChange} options={["1st Owner", "2nd Owner", "3rd Owner", "4th Owner+"]} />
-                <Select label="Type" name="type" value={formData.type} onChange={handleInputChange} options={["Sedan", "SUV", "Hatchback", "Coupe", "Convertible", "Minivan", "Pickup"]} />
-                <Input label="Seating Capacity" name="seatingCapacity" type="number" value={formData.seatingCapacity} onChange={handleInputChange} min={1} max={20} />
-                <Input label="Location" name="location" value={formData.location} onChange={handleInputChange} maxLength={128} />
+                <Input
+                  label="Brand *"
+                  name="brand"
+                  value={formData.brand}
+                  onChange={handleInputChange}
+                  required
+                  maxLength={64}
+                />
+                <Input
+                  label="Model *"
+                  name="model"
+                  value={formData.model}
+                  onChange={handleInputChange}
+                  required
+                  maxLength={64}
+                />
+                <Input
+                  label="Year *"
+                  name="year"
+                  type="number"
+                  value={formData.year}
+                  onChange={handleInputChange}
+                  required
+                  min={1886}
+                  max={2030}
+                />
+                <Input
+                  label="Price *"
+                  name="price"
+                  type="number"
+                  value={formData.price}
+                  onChange={handleInputChange}
+                  required
+                  min={0}
+                  max={1000000}
+                />
+                <Select
+                  label="Fuel Type *"
+                  name="fuelType"
+                  value={formData.fuelType}
+                  onChange={handleInputChange}
+                  options={[
+                    "Gasoline",
+                    "Petrol",
+                    "Diesel",
+                    "Electric",
+                    "Hybrid",
+                    "CNG",
+                  ]}
+                  required
+                />
+                <Input
+                  label="Mileage (km)"
+                  name="mileage"
+                  type="number"
+                  value={formData.mileage}
+                  onChange={handleInputChange}
+                  min={0}
+                  max={1000000}
+                />
+                <Input
+                  label="Color"
+                  name="color"
+                  value={formData.color}
+                  onChange={handleInputChange}
+                  maxLength={64}
+                />
+                <Select
+                  label="Transmission"
+                  name="transmission"
+                  value={formData.transmission}
+                  onChange={handleInputChange}
+                  options={["Manual", "Automatic", "AMT", "CVT", "DCT"]}
+                />
+                <Select
+                  label="Owners"
+                  name="owners"
+                  value={formData.owners}
+                  onChange={handleInputChange}
+                  options={[
+                    "1st Owner",
+                    "2nd Owner",
+                    "3rd Owner",
+                    "4th Owner+",
+                  ]}
+                />
+                <Select
+                  label="Type"
+                  name="type"
+                  value={formData.type}
+                  onChange={handleInputChange}
+                  options={[
+                    "Sedan",
+                    "SUV",
+                    "Hatchback",
+                    "Coupe",
+                    "Convertible",
+                    "Minivan",
+                    "Pickup",
+                  ]}
+                />
+                <Input
+                  label="Seating Capacity"
+                  name="seatingCapacity"
+                  type="number"
+                  value={formData.seatingCapacity}
+                  onChange={handleInputChange}
+                  min={1}
+                  max={20}
+                />
+                <Input
+                  label="Location"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleInputChange}
+                  maxLength={128}
+                />
               </div>
 
               {/* Features */}
@@ -777,12 +938,12 @@ function AdminDashboard({ onLogout }) {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Features (comma-separated)
                 </label>
-                <textarea 
-                  name="features" 
-                  value={formData.features} 
-                  onChange={handleInputChange} 
+                <textarea
+                  name="features"
+                  value={formData.features}
+                  onChange={handleInputChange}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  maxLength={512} 
+                  maxLength={512}
                   placeholder="AC, Power Steering, Music System, Sunroof..."
                   rows={3}
                 />
@@ -790,11 +951,11 @@ function AdminDashboard({ onLogout }) {
 
               {/* Availability */}
               <div className="flex items-center gap-2 mb-6">
-                <input 
-                  type="checkbox" 
-                  name="available" 
-                  checked={formData.available} 
-                  onChange={handleInputChange} 
+                <input
+                  type="checkbox"
+                  name="available"
+                  checked={formData.available}
+                  onChange={handleInputChange}
                   className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                 />
                 <label className="text-sm font-medium text-gray-700">
@@ -807,14 +968,14 @@ function AdminDashboard({ onLogout }) {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Upload Images (max 10 files, 8MB each)
                 </label>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  multiple 
-                  onChange={handleFilesChange} 
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFilesChange}
                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                 />
-                
+
                 {/* New Image Previews */}
                 {imagePreviews.length > 0 && (
                   <div className="mt-4">
@@ -824,9 +985,9 @@ function AdminDashboard({ onLogout }) {
                     <div className="flex gap-2 flex-wrap">
                       {imagePreviews.map((preview, index) => (
                         <div key={index} className="relative">
-                          <img 
-                            src={preview} 
-                            alt={`Preview ${index + 1}`} 
+                          <img
+                            src={preview}
+                            alt={`Preview ${index + 1}`}
                             className="w-20 h-20 object-cover rounded-lg border"
                           />
                           <button
@@ -850,9 +1011,9 @@ function AdminDashboard({ onLogout }) {
                     </p>
                     <div className="flex gap-2 flex-wrap">
                       {formData.images.map((image, index) => (
-                        <img 
+                        <img
                           key={index}
-                          src={image} 
+                          src={image}
                           alt={`Existing ${index + 1}`}
                           className="w-16 h-16 object-cover rounded-lg border"
                           onError={(e) => {
@@ -867,19 +1028,23 @@ function AdminDashboard({ onLogout }) {
 
               {/* Form Actions */}
               <div className="flex gap-3 justify-end pt-6 border-t">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setShowForm(false)}
                   className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={uploading}
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {uploading ? "Uploading..." : editingCar ? "Update Car" : "Add Car"}
+                  {uploading
+                    ? "Uploading..."
+                    : editingCar
+                      ? "Update Car"
+                      : "Add Car"}
                 </button>
               </div>
             </form>
@@ -903,9 +1068,7 @@ function AdminDashboard({ onLogout }) {
 function Input({ label, ...props }) {
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700">
-        {label}
-      </label>
+      <label className="block text-sm font-medium text-gray-700">{label}</label>
       <input
         {...props}
         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
@@ -918,9 +1081,7 @@ function Input({ label, ...props }) {
 function Select({ label, name, value, onChange, options = [], required }) {
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700">
-        {label}
-      </label>
+      <label className="block text-sm font-medium text-gray-700">{label}</label>
       <select
         name={name}
         value={value}
@@ -928,7 +1089,7 @@ function Select({ label, name, value, onChange, options = [], required }) {
         required={required}
         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
       >
-        {options.map(option => (
+        {options.map((option) => (
           <option key={option} value={option}>
             {option}
           </option>
@@ -939,19 +1100,43 @@ function Select({ label, name, value, onChange, options = [], required }) {
 }
 
 // Table View Component
-function TableView({ cars, onEdit, onDelete, onToggleAvailability, getCarId, getPrimaryImage, getAllImages, PLACEHOLDER_ERROR_IMAGE, onOpenLightbox }) {
+function TableView({
+  cars,
+  onEdit,
+  onDelete,
+  onToggleAvailability,
+  getCarId,
+  getPrimaryImage,
+  getAllImages,
+  PLACEHOLDER_ERROR_IMAGE,
+  onOpenLightbox,
+}) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b bg-gray-50">
-            <th className="text-left py-3 px-4 font-semibold text-gray-900">Image</th>
-            <th className="text-left py-3 px-4 font-semibold text-gray-900">Brand & Model</th>
-            <th className="text-left py-3 px-4 font-semibold text-gray-900">Year</th>
-            <th className="text-left py-3 px-4 font-semibold text-gray-900">Price</th>
-            <th className="text-left py-3 px-4 font-semibold text-gray-900">Fuel</th>
-            <th className="text-left py-3 px-4 font-semibold text-gray-900">Status</th>
-            <th className="text-left py-3 px-4 font-semibold text-gray-900">Actions</th>
+            <th className="text-left py-3 px-4 font-semibold text-gray-900">
+              Image
+            </th>
+            <th className="text-left py-3 px-4 font-semibold text-gray-900">
+              Brand & Model
+            </th>
+            <th className="text-left py-3 px-4 font-semibold text-gray-900">
+              Year
+            </th>
+            <th className="text-left py-3 px-4 font-semibold text-gray-900">
+              Price
+            </th>
+            <th className="text-left py-3 px-4 font-semibold text-gray-900">
+              Fuel
+            </th>
+            <th className="text-left py-3 px-4 font-semibold text-gray-900">
+              Status
+            </th>
+            <th className="text-left py-3 px-4 font-semibold text-gray-900">
+              Actions
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -959,17 +1144,20 @@ function TableView({ cars, onEdit, onDelete, onToggleAvailability, getCarId, get
             const carId = getCarId(car);
             const primaryImage = getPrimaryImage(car);
             const allImages = getAllImages(car);
-            
+
             return (
-              <tr key={carId} className="border-b hover:bg-gray-50 transition-colors">
+              <tr
+                key={carId}
+                className="border-b hover:bg-gray-50 transition-colors"
+              >
                 <td className="py-3 px-4">
                   <img
                     src={primaryImage}
                     alt={car.model}
                     className="w-16 h-12 object-cover rounded cursor-zoom-in border"
                     onClick={() => onOpenLightbox(allImages, 0)}
-                    onError={(e) => { 
-                      e.target.src = PLACEHOLDER_ERROR_IMAGE; 
+                    onError={(e) => {
+                      e.target.src = PLACEHOLDER_ERROR_IMAGE;
                     }}
                   />
                 </td>
@@ -982,29 +1170,31 @@ function TableView({ cars, onEdit, onDelete, onToggleAvailability, getCarId, get
                 </td>
                 <td className="py-3 px-4 text-gray-700">{car.fuelType}</td>
                 <td className="py-3 px-4">
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    car.available 
-                      ? "bg-green-100 text-green-800" 
-                      : "bg-red-100 text-red-800"
-                  }`}>
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-medium ${
+                      car.available
+                        ? "bg-green-100 text-green-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
                     {car.available ? "Available" : "Unavailable"}
                   </span>
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex gap-2">
-                    <button 
+                    <button
                       onClick={() => onToggleAvailability(car)}
                       className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                     >
                       Toggle
                     </button>
-                    <button 
+                    <button
                       onClick={() => onEdit(car)}
                       className="text-green-600 hover:text-green-800 text-sm font-medium"
                     >
                       Edit
                     </button>
-                    <button 
+                    <button
                       onClick={() => onDelete(carId)}
                       className="text-red-600 hover:text-red-800 text-sm font-medium"
                     >
@@ -1037,11 +1227,11 @@ function Lightbox({ images, index = 0, onClose }) {
   }, [onClose]);
 
   const nextImage = () => {
-    setCurrentIndex(prev => (prev + 1) % images.length);
+    setCurrentIndex((prev) => (prev + 1) % images.length);
   };
 
   const prevImage = () => {
-    setCurrentIndex(prev => (prev - 1 + images.length) % images.length);
+    setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
   };
 
   if (!images.length) return null;
@@ -1081,7 +1271,8 @@ function Lightbox({ images, index = 0, onClose }) {
           alt={`Image ${currentIndex + 1}`}
           className="max-w-full max-h-full object-contain rounded-lg"
           onError={(e) => {
-            e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23fef2f2'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%23dc2626'%3EImage Error%3C/text%3E%3C/svg%3E";
+            e.target.src =
+              "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23fef2f2'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%23dc2626'%3EImage Error%3C/text%3E%3C/svg%3E";
           }}
         />
       </div>
@@ -1101,15 +1292,106 @@ function Lightbox({ images, index = 0, onClose }) {
               alt={`Thumbnail ${idx + 1}`}
               onClick={() => setCurrentIndex(idx)}
               className={`w-12 h-12 object-cover rounded border cursor-pointer flex-shrink-0 transition-all ${
-                currentIndex === idx ? "ring-2 ring-white ring-opacity-80" : "opacity-70 hover:opacity-100"
+                currentIndex === idx
+                  ? "ring-2 ring-white ring-opacity-80"
+                  : "opacity-70 hover:opacity-100"
               }`}
               onError={(e) => {
-                e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' fill='%23fef2f2'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='8' fill='%23dc2626'%3EE%3C/text%3E%3C/svg%3E";
+                e.target.src =
+                  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' fill='%23fef2f2'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='8' fill='%23dc2626'%3EE%3C/text%3E%3C/svg%3E";
               }}
             />
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function ImageSlider({ images, height = "h-48", onClick }) {
+  const [index, setIndex] = React.useState(() => 0);
+  const [paused, setPaused] = React.useState(false);
+
+  // ✅ ADD THIS
+  React.useEffect(() => {
+    setIndex(0);
+  }, [images]);
+
+  React.useEffect(() => {
+    if (images.length <= 1 || paused) return;
+
+    let mounted = true;
+
+    const timer = setInterval(() => {
+      if (mounted) {
+        setIndex((prev) => (prev + 1) % images.length);
+      }
+    }, 3000);
+
+    return () => {
+      mounted = false;
+      clearInterval(timer);
+    };
+  }, [images, paused]);
+
+  if (!images.length) return null;
+
+  return (
+    <div
+      className={`relative w-full overflow-hidden ${height}`}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      <img
+        src={images[index]}
+        loading="lazy"
+        className="w-full h-full object-cover cursor-pointer"
+        onClick={onClick}
+        onError={(e) => {
+          e.target.src =
+            "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23fef2f2'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%23dc2626'%3EImage Error%3C/text%3E%3C/svg%3E";
+        }}
+      />
+
+      {images.length > 1 && (
+        <>
+          {/* Left */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIndex((index - 1 + images.length) % images.length);
+            }}
+            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white px-3 py-2 rounded-full"
+          >
+            ‹
+          </button>
+
+          {/* Right */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIndex((index + 1) % images.length);
+            }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white px-3 py-2 rounded-full"
+          >
+            ›
+          </button>
+        </>
+      )}
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+        {images.map((_, i) => (
+          <span
+            key={i}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIndex(i);
+            }}
+            className={`w-2 h-2 rounded-full cursor-pointer ${
+              index === i ? "bg-white" : "bg-white/50"
+            }`}
+          />
+        ))}
+      </div>
     </div>
   );
 }
