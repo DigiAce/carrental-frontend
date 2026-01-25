@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
 function AdminDashboard({ onLogout }) {
-  const BACKEND_URL = "http://localhost:5001/api";
+  const BACKEND_URL = `${import.meta.env.VITE_API_URL}/api`;
 
   const PLACEHOLDER_CAR_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%236b7280'%3ECar Image%3C/text%3E%3C/svg%3E";
   const PLACEHOLDER_ERROR_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23fef2f2'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='14' fill='%23dc2626'%3EImage Error%3C/text%3E%3C/svg%3E";
